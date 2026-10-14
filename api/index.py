@@ -377,7 +377,7 @@ def pdb_file():
 '''
 @app.route("/pdb", methods=['POST'])
 def pdb_file():
-    req_data = request.get_json()
+    '''req_data = request.get_json()
     sequence = req_data['seq']
     structure = req_data['structure']
     print("Got " + sequence)
@@ -395,8 +395,10 @@ def pdb_file():
              "--device", "cpu",
              "--relax_steps", "0"],
             cwd="./RhoFold", check=True, timeout=1800,
-        )
-        return jsonify(pdb=((tmp / "unrelaxed_model.pdb").read_text()))
+            )
+     ''' 
+    #return jsonify(pdb=((tmp / "unrelaxed_model.pdb").read_text()))
+    return jsonify(pdb=(""))
 
 
 @app.route('/data/pdb/<path:filename>', methods=['GET'])

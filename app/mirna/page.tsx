@@ -4,7 +4,7 @@ import { IDesignContext, DesignContext } from '../designContext';
 import { useState, useRef, useContext, useEffect } from "react";
 import {MiRNATable} from '../components'
 import AsyncSelect from 'react-select/async';
-import disease_names from '../../data/HMDD_disease_names.json';
+import disease_names from '../data/HMDD_disease_names.json';
 
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL
