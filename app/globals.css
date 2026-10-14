@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 3, 102, 214;       /* Cyan-blue */
+  --background-start-rgb: 229, 245, 255; /* Very light cyan */
+  --background-end-rgb: 255, 255, 255; /* White */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 15, 30, 70;  /* Midnight */
+    --background-start-rgb: 100, 200, 255;  /* Light cyan */ 
+    --background-end-rgb: 80, 145, 220; /*30, 50, 100;*/   /* Dark slate */
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
