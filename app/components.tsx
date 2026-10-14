@@ -3,10 +3,12 @@ import { useState, useRef, useContext, useEffect } from "react";
 import { IDesignContext, DesignContext } from './designContext';
 import Image from 'next/image';
 import img from '../public/logo.svg'
+import download_img from '../public/file_download.svg'
 import { IAdvancedContext, AdvancedContext } from './advancedContext';
 import { PluginContext } from 'molstar/lib/mol-plugin/context';
 import { DefaultPluginSpec } from 'molstar/lib/mol-plugin/spec';
 import { FaChevronDown, FaChevronUp } from "react-icons/fa";
+import Link from 'next/link';
 
 
 
@@ -160,11 +162,35 @@ export function LoadingIndicator() {
 export function DesignOutput({sequence, full_seq, gen_structure, original_structure, mfe} : {sequence: string, full_seq: string, gen_structure: string, original_structure:string, mfe:string}) {
   return (
     <>
+    <div className='flex flex-row'>
     <h2>Designed full sequence: </h2>
+    <div className='bg-gray-400 rounded'>
+    <Link href={URL.createObjectURL(new Blob([`>RiboLogicFull\n${full_seq}`]))} download="RiboLogicFull.fasta">
+     <Image
+          src={download_img}
+          alt="Full sequence download logo"
+          width={30}
+          height={30}
+          priority />
+     </Link>
+     </div>
+     </div>
     <div className='flex bg-white max-h-80 overflow-y-auto'>    
         <p className='font-mono break-all'>{full_seq}</p>
     </div>
+    <div className='flex flex-row'>
     <h2>Designed logic sequence: </h2>
+    <div className='bg-gray-400 rounded'>
+     <Link href={URL.createObjectURL(new Blob([`>RiboLogicLOgic\n${sequence}`]))} download="RiboLogicLogic.fasta">
+     <Image
+          src={download_img}
+          alt="Logic sequence download logo"
+          width={30}
+          height={30}
+          priority />
+     </Link>
+     </div>
+     </div>
     <div className='flex bg-white max-h-80 overflow-y-auto'>    
         <p className='font-mono break-all'>{sequence}</p>
     </div>
