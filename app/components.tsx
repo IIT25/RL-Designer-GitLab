@@ -158,14 +158,22 @@ export function LoadingIndicator() {
     </div>
   );
 }
+interface DesignOutputProps {
+  sequence: string,
+  full_seq?: string,
+  gen_structure: string,
+  original_structure: string,
+  mfe:string
+}
 
-export function DesignOutput({sequence, full_seq, gen_structure, original_structure, mfe} : {sequence: string, full_seq: string, gen_structure: string, original_structure:string, mfe:string}) {
+export function DesignOutput(outputs : DesignOutputProps) {
   return (
     <>
+    {outputs.full_seq && <div>
     <div className='flex flex-row'>
     <h2>Designed full sequence: </h2>
     <div className='bg-gray-400 rounded'>
-    <Link href={URL.createObjectURL(new Blob([`>RiboLogicFull\n${full_seq}`]))} download="RiboLogicFull.fasta">
+    <Link href={URL.createObjectURL(new Blob([`>RiboLogicFull\n${outputs.full_seq}`]))} download="RiboLogicFull.fasta">
      <Image
           src={download_img}
           alt="Full sequence download logo"
@@ -176,12 +184,15 @@ export function DesignOutput({sequence, full_seq, gen_structure, original_struct
      </div>
      </div>
     <div className='flex bg-white max-h-80 overflow-y-auto'>    
-        <p className='font-mono break-all'>{full_seq}</p>
+        <p className='font-mono break-all'>{outputs.full_seq}</p>
     </div>
+  </div>}
+  <div>
     <div className='flex flex-row'>
-    <h2>Designed logic sequence: </h2>
+    {outputs.full_seq && <h2>Designed logic sequence: </h2>}
+    {!outputs.full_seq && <h2>Designed sequence: </h2>}
     <div className='bg-gray-400 rounded'>
-     <Link href={URL.createObjectURL(new Blob([`>RiboLogicLOgic\n${sequence}`]))} download="RiboLogicLogic.fasta">
+     <Link href={URL.createObjectURL(new Blob([`>RiboLogic\n${outputs.sequence}`]))} download="RiboLogic.fasta">
      <Image
           src={download_img}
           alt="Logic sequence download logo"
@@ -192,7 +203,8 @@ export function DesignOutput({sequence, full_seq, gen_structure, original_struct
      </div>
      </div>
     <div className='flex bg-white max-h-80 overflow-y-auto'>    
-        <p className='font-mono break-all'>{sequence}</p>
+        <p className='font-mono break-all'>{outputs.sequence}</p>
+    </div>
     </div>
     <div className='flex flex-row '>
     <div className='flex flex-col'>
@@ -200,11 +212,11 @@ export function DesignOutput({sequence, full_seq, gen_structure, original_struct
       <p>Original structure:</p>
     </div>
     <div className='min-w-0 flex-1 overflow-x-auto max-w-2xl bg-white'>
-     <p className='font-mono text-sm whitespace-nowrap'>{gen_structure}</p>
-     <p className='font-mono text-sm whitespace-nowrap'>{original_structure}</p>
+     <p className='font-mono text-sm whitespace-nowrap'>{outputs.gen_structure}</p>
+     <p className='font-mono text-sm whitespace-nowrap'>{outputs.original_structure}</p>
     </div>
     </div>
-     <p className='font-mono'>MFE: {mfe}</p>
+     <p className='font-mono'>MFE: {outputs.mfe}</p>
      </>
   );
 }

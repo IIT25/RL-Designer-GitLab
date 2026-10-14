@@ -97,7 +97,7 @@ export default function Page() {
     <button onClick={handleButtonSubmit} className="py-4 px-4 rounded-full transition-colors bg-white hover:bg-[#383838] dark:hover:bg-[#ccc]">Construct the design!</button>
      {isDataLoading && <LoadingIndicator />}
      {!isDataLoading && submit !=2 && 
-     <DesignOutput sequence={response.sequence} full_seq={response.full_sequence} gen_structure={response.generated_structure} original_structure={iadvancedContext.structure.join("")} mfe={response.mfe}/>}
+     <DesignOutput sequence={response.sequence} gen_structure={response.generated_structure} original_structure={iadvancedContext.structure.join("")} mfe={response.mfe}/>}
     {/*<div className="h-50 max-h-50 p-10">
      {!isDataLoading && (pdb_link != "") && submit !=2 && (<div className="flex flex-col">
         <div className="flex bg-gray-400 rounded -mb-16 z-40 justify-end ml-auto">
