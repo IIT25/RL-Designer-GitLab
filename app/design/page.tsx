@@ -19,6 +19,7 @@ export default function Page() {
    const [invalidInput, setInvalidInput] = useState(false)
    const [response, setdata] = useState({
         sequence: "",
+        full_sequence: "",
         generated_structure: "",
         original_structure: "",
         mfe: "",
@@ -48,6 +49,7 @@ export default function Page() {
                 res.json().then((data) => {
                     setdata({
                         sequence: data.sequence,
+                        full_sequence: data.full_sequence,
                         generated_structure: data.generated_structure,
                         original_structure: data.original_structure,
                         mfe: data.mfe,
@@ -90,7 +92,9 @@ export default function Page() {
         setPdb_link(URL.createObjectURL(new Blob([pdb_text], { type: "chemical/x-pdb" })));
     },
     [pdb_text]);
+    
   return (
+    // @ts-ignore
     <main className="flex min-h-screen flex-col items-center justify-around p-10">
     <h1 className="mb-4 text-2xl font-bold tracking-tight text-heading md:text-4xl lg:text-5xl">Design page</h1>
     <p>Here you can construct the final design using your selected miRNAs and protein from the previous pages by simply clicking the "Construct design" button. 
@@ -99,7 +103,7 @@ export default function Page() {
     {invalidInput && <p className="text-red-500">Invalid input: some miRNAs have length 0</p>}
     <button onClick={handleButtonSubmit} className="py-4 px-4 rounded-full transition-colors bg-white hover:bg-[#383838] dark:hover:bg-[#ccc]">Construct the design!</button>
      {isDataLoading && <LoadingIndicator />}
-     {!isDataLoading && submit !=2 && <DesignOutput sequence={response.sequence} gen_structure={response.generated_structure} original_structure={response.original_structure} mfe={response.mfe}/>}
+     {!isDataLoading && submit !=2 && <DesignOutput sequence={response.sequence} full_seq={response.full_sequence} gen_structure={response.generated_structure} original_structure={response.original_structure} mfe={response.mfe}/>}
     <div className="h-50 max-h-50 p-10">
      {!isDataLoading && (pdb_text != "") && submit !=2 && (<div className="flex flex-col">
         <div className="flex bg-gray-400 rounded -mb-16 z-40 justify-end ml-auto">

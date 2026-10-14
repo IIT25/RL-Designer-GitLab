@@ -157,10 +157,14 @@ export function LoadingIndicator() {
   );
 }
 
-export function DesignOutput({sequence, gen_structure, original_structure, mfe} : {sequence: string, gen_structure: string, original_structure:string, mfe:string}) {
+export function DesignOutput({sequence, full_seq, gen_structure, original_structure, mfe} : {sequence: string, full_seq: string, gen_structure: string, original_structure:string, mfe:string}) {
   return (
     <>
-    <h2>Designed sequence: </h2>
+    <h2>Designed full sequence: </h2>
+    <div className='flex bg-white max-h-80 overflow-y-auto'>    
+        <p className='font-mono break-all'>{full_seq}</p>
+    </div>
+    <h2>Designed logic sequence: </h2>
     <div className='flex bg-white max-h-80 overflow-y-auto'>    
         <p className='font-mono break-all'>{sequence}</p>
     </div>

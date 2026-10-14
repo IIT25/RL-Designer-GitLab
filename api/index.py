@@ -91,9 +91,10 @@ def python_route():
         #TODO Validate incoming data
         #TODO Change defualt, just for testing
         print(f"miRNA1: {req_data['miRNA1']} \n miRNA2: {req_data['miRNA2']} \n  protein: {req_data['protein']} \n")
-        [res_sequence, res_structure, original_structure, mfe] = construct_design([req_data['miRNA1'], req_data['miRNA2'], req_data['protein']])
+        [res_sequence, res_full_seq, res_structure, original_structure, mfe] = construct_design([req_data['miRNA1'], req_data['miRNA2'], req_data['protein']])
 
         return jsonify({"sequence": res_sequence, 
+                "full_sequence": res_full_seq,
                 "generated_structure": res_structure,
                 "original_structure": original_structure,
                 "mfe": mfe})
@@ -304,6 +305,8 @@ def construct_design(domains):
     '''
     miRNA1 = domains[0]
     miRNA2 = domains[1]
+
+    protein = domains[2]
     RiboSwitch = "UUUUCCAUCAAGAACAGGCCACCAUGGAAAA"
 
     #Gen ="CGUAAAGGAGAAGAACUUUUCACUGGAGUUGUCCCAAUUCUUGUUGAAUUAGAUGGUGAUGUUAAUGGGCACAAAUUUUCUGUCAGUGGAGAGGGUGAAGGUGAUGCAACAUACGGAAAACUUACCCUUAAAUUUAUUUGCACUACUGGAAAACUACCUGUUCCAUGGCCAACACUUGUCACUACUUUCGGUUAUGGUGUUCAAUGCUUUGCGAGAUACCCAGAUCAUAUGAAACAGCAUGACUUUUUCAAGAGUGCCAUGCCCGAAGGUUAUGUACAGGAAAGAACUAUAUUUUUCAAAGAUGACGGGAACUACAAGACACGUGCUGAAGUCAAGUUUGAAGGUGAUACCCUUGUUAAUAGAAUCGAGUUAAAAGGUAUUGAUUUUAAAGAAGAUGGAAACAUUCUUGGACACAAAUUGGAAUACAACUAUAACUCACACAAUGUAUACAUCAUGGCAGACAAACAAAAGAAUGGAAUCAAAGUUAACUUCAAAAUUAGACACAACAUUGAAGAUGGAAGCGUUCAACUAGCAGACCAUUAUCAACAAAAUACUCCAAUUGGCGAUGGCCCUGUCCUUUUACCAGACAACCAUUACCUGUCCACACAAUCUGCCCUUUCGAAAGAUCCCAACGAAAAGAGAGAuCACAUGGUCCUUCUUGAGUUUGUAACAGCUGCUGGGAUUACACAUGGCAUGGAUGAACUAUACAAAUAA"
@@ -322,6 +325,7 @@ def construct_design(domains):
 
     results = multi_start_hill_climb(domain_order, structure_map)
     best_result = min(results, key=lambda x: x[3])
+    full_seq = best_result[1] + protein
     print(structure_map)
     '''with open("./data/run20.txt", "w") as f:
                 for res in results:
@@ -331,7 +335,7 @@ def construct_design(domains):
                      f.write("\n")
                      f.write("\n")
     '''
-    return [best_result[1],  best_result[2], structure_map, best_result[3]]
+    return [best_result[1], full_seq, best_result[2], structure_map, best_result[3]]
 
 '''
 @app.route("/pdb", methods=['POST'])
