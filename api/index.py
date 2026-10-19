@@ -37,7 +37,11 @@ def mrna_suggestion():
         print("Could not parse result")
 
     for entry in data['results']:
-        name = entry['proteinDescription']['recommendedName']['fullName']['value']
+        try:
+            name = entry['proteinDescription']['recommendedName']['fullName']['value']
+        except:
+            name = entry['proteinDescription']['submissionNames'][0]['fullName']['value']
+            print(entry['proteinDescription']['submissionNames'])
         suggestions += [name]
     if (len(suggestions) == 0):
         suggestions = ["No match found"]
@@ -52,7 +56,7 @@ def mrna_suggestion():
                             seq_id = databaseRef['id']
 
 
-            seq = requests.get('https://www.ebi.ac.uk/ena/browser/api/fasta/M62654')
+            seq = requests.get('https://www.ebi.ac.uk/ena/browser/api/fasta/' + str(seq_id))
             #TODO maybe also return the first line with the metadata
             sequence_result = ''.join(seq.text.split('\n')[1:])
             suggestions = []
@@ -297,45 +301,147 @@ def multi_start_hill_climb(seq_in, structure,
     return results
 
 
+def output_file(
+    domains_out,
+    structure_out,
+    path: Path = AROS_INPUT_FILE,
+):
+    if not isinstance(domains_out, str):
+        domains_out = "".join(domains_out)
+
+    if len(domains_out) != len(structure_out):
+        raise ValueError(
+            f"Sequence ({len(domains_out)}) and structure "
+            f"({len(structure_out)}) must be the same length."
+        )
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    path.write_text(
+        f"Sequence: {domains_out}\n"
+        f"Structure: {structure_out}\n",
+        encoding="utf-8",
+    )
+
+    return path
+
+
+
+    
+def input_file(path: Path, file_pattern: str = "temp_file_*.txt"):
+    path = Path(path)
+    files = sorted(path.glob(file_pattern))
+
+    
+    if not files and (path / "temp_file.txt").is_file():
+        files = [path / "temp_file.txt"]
+
+    if not files:
+        raise FileNotFoundError(f"No output files matching {file_pattern} in {path}")
+
+    candidates = [] 
+
+    for full_path in files:
+        sequence = structure = None
+        ensemble_div = None
+
+        with full_path.open("r", encoding="utf-8") as file:
+            for line in file:
+                line = line.strip()
+                if line.startswith("Sequence:"):
+                    sequence = line.split(":", 1)[1].strip()
+                elif line.startswith("Structure:"):
+                    structure = line.split(":", 1)[1].strip()
+                elif line.startswith("Ensemble_div:"):
+                    try:
+                        ensemble_div = float(line.split(":", 1)[1].strip())
+                    except ValueError:
+                        ensemble_div = None
+
+        
+        if sequence is None or structure is None or len(sequence) != len(structure):
+            print(f"Skipping malformed output file: {full_path}", flush=True)
+            continue
+
+        
+        candidates.append((
+            ensemble_div if ensemble_div is not None else float("inf"),
+            sequence, structure, full_path.name,
+        ))
+
+    if not candidates:
+        raise ValueError(f"No valid output files found in {path}")
+
+    best = min(candidates, key=lambda c: c[0])
+    print(f"Picked {best[3]} with Ensemble_div={best[0]} "
+          f"out of {len(candidates)} candidates", flush=True)
+
+    return best[1], best[2]
+
+import shutil, tempfile
+
+API_DIR = Path(__file__).resolve().parent
+AROS_BIN = API_DIR / "bin" / "aros"
+
+def run_aros(workdir: Path):
+    exe = Path("/tmp/aros_bin")
+    if not exe.exists():
+        shutil.copy(AROS_BIN, exe)
+        exe.chmod(0o755)
+    env = {**os.environ, "RUST_BACKTRACE": "1"}
+    result = subprocess.run([str(exe)], cwd=workdir, text=True,
+                            capture_output=True, timeout=240, env=env)
+    print(f"AROS exit code: {result.returncode}", flush=True)
+    print(f"AROS stdout:\n{result.stdout}", flush=True)
+    print(f"AROS stderr:\n{result.stderr}", flush=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"AROS failed ({result.returncode}):\n{result.stderr}")
+    return result.stdout
+
+
 
 def construct_design(domains):
+    use_aros = True
     #RL3
-    '''miRNA1 = "UAGCUUAUCAGACUGAUGUUGACU"
-    miRNA2 = "UGGAGUGUGACAAUGGUGUUUG"
-    '''
     miRNA1 = domains[0]
     miRNA2 = domains[1]
 
     protein = domains[2]
     RiboSwitch = "UUUUCCAUCAAGAACAGGCCACCAUGGAAAA"
 
-    #Gen ="CGUAAAGGAGAAGAACUUUUCACUGGAGUUGUCCCAAUUCUUGUUGAAUUAGAUGGUGAUGUUAAUGGGCACAAAUUUUCUGUCAGUGGAGAGGGUGAAGGUGAUGCAACAUACGGAAAACUUACCCUUAAAUUUAUUUGCACUACUGGAAAACUACCUGUUCCAUGGCCAACACUUGUCACUACUUUCGGUUAUGGUGUUCAAUGCUUUGCGAGAUACCCAGAUCAUAUGAAACAGCAUGACUUUUUCAAGAGUGCCAUGCCCGAAGGUUAUGUACAGGAAAGAACUAUAUUUUUCAAAGAUGACGGGAACUACAAGACACGUGCUGAAGUCAAGUUUGAAGGUGAUACCCUUGUUAAUAGAAUCGAGUUAAAAGGUAUUGAUUUUAAAGAAGAUGGAAACAUUCUUGGACACAAAUUGGAAUACAACUAUAACUCACACAAUGUAUACAUCAUGGCAGACAAACAAAAGAAUGGAAUCAAAGUUAACUUCAAAAUUAGACACAACAUUGAAGAUGGAAGCGUUCAACUAGCAGACCAUUAUCAACAAAAUACUCCAAUUGGCGAUGGCCCUGUCCUUUUACCAGACAACCAUUACCUGUCCACACAAUCUGCCCUUUCGAAAGAUCCCAACGAAAAGAGAGAuCACAUGGUCCUUCUUGAGUUUGUAACAGCUGCUGGGAUUACACAUGGCAUGGAUGAACUAUACAAAUAA"
-
-    Toehold = 'K' *10
+    Toehold = 'X'*10 if use_aros else 'K' *10
+    RiboSwitchDisplace = 'R'*13
 
     loop7 = "N" * 7
-
-    #RL3
-    RiboSwitchDisplace = "R" * 13
     domain_order = (comp(miRNA1) + comp(miRNA2) + comp(RiboSwitchDisplace) + comp(Toehold) + miRNA2[7:]
                     + loop7 + miRNA1[7:] + Toehold + RiboSwitchDisplace + RiboSwitch + comp(RiboSwitchDisplace))
 
     structure_map = ('(' *len(comp(miRNA1)[7:]) + '.' *len(comp(miRNA1)[:7]) + '(' *len(comp(miRNA2)[7:]) + '.' *len(comp(miRNA2)[:7]) + '.' * len((comp(RiboSwitchDisplace) + comp(Toehold))) + ')' * len(miRNA2[7:]) + 
                      '.' * len(loop7) + ')' * len(miRNA1[7:]) + '.' * len(Toehold) + '(' * len(RiboSwitchDisplace) + '(' * 8 + '.' * (len(RiboSwitch) -16) + ')' * 8 +  ')' * len(comp(RiboSwitchDisplace)))
 
-    results = multi_start_hill_climb(domain_order, structure_map)
-    best_result = min(results, key=lambda x: x[3])
-    full_seq = best_result[1] + protein
+    if use_aros:
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp)
+            (work / "misc" / "temp_folder").mkdir(parents=True)
+            output_file(domain_order, structure_map, path=work / "misc" / "input_1.txt")
+            run_aros(work)
+            res_sequence, res_structure = input_file(path=work / "misc" / "temp_folder")
+
+            print(res_sequence, flush=True)
+            print(res_structure, flush=True)
+
+            _, mfe = RNA.fold(res_sequence)
+    else:
+        results = multi_start_hill_climb(domain_order, structure_map)
+        best_result = min(results, key=lambda x: x[3])
+        mfe = best_result[3]
+        res_structure = best_result[2]
+        res_sequence = best_result[1]
+    
+    full_seq = res_sequence + protein
     print(structure_map)
-    '''with open("./data/run20.txt", "w") as f:
-                for res in results:
-                     f.write(str(res))
-                     f.write("\n")
-                     f.write("Main strand: " +res[1])
-                     f.write("\n")
-                     f.write("\n")
-    '''
-    return [best_result[1], full_seq, best_result[2], structure_map, best_result[3]]
+    return [res_sequence, full_seq, res_structure, structure_map, mfe]
 
 '''
 @app.route("/pdb", methods=['POST'])
