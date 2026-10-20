@@ -18,18 +18,15 @@ export default function Page() {
    const [errortext, setErrorText] = useState("")
    //Backend selector
     const [isAROS, setIsAROS] = useState(false);
-   const [txt_link, setTxt_link] = useState("")
    const [pdb_link, setPdb_link] = useState("")
    const [response, setdata] = useState({
         sequence: "",
         full_sequence: "",
         generated_structure: "",
-        mfe: "",
-        filepath: ""
+        mfe: ""
     });
     //Loading indicator
     const [isDataLoading, setIsDataLoading] = useState(false);
-    const [receivedPDB, setReceivedPDB] = useState(false)
     
     const handleSubmit = useCallback(async () => {
         if (submit == 2) {
@@ -52,10 +49,8 @@ export default function Page() {
                         sequence: data.sequence,
                         full_sequence: data.full_sequence,
                         generated_structure: data.generated_structure,
-                        mfe: data.mfe,
-                        filepath: data.filepath
-                    })
-                    setTxt_link(response.filepath);
+                        mfe: data.mfe
+                    });
                     fetch("api/pdb", {
                     method: "POST",
                     headers: { "Content-type": "application/json"},
@@ -75,10 +70,15 @@ export default function Page() {
 
 
     function handleButtonSubmit(e: any) {
-        if (iadvancedContext.sequence.join("").length != iadvancedContext.structure.join("").length) {
+        if (iadvancedContext.sequence.join("").length == 0) {
+            setInvalidInput(true)
+            setErrorText(`Sequence with length 0`)  
+        }
+        else {
+            if (iadvancedContext.sequence.join("").length != iadvancedContext.structure.join("").length) {
             setInvalidInput(true)
             setErrorText(`the sequence and the structure has different lengths with: sequence: ${iadvancedContext.sequence.join("").length} structure: ${iadvancedContext.structure.join("").length}`)
-        } else {
+            } else {
                 const structure_chr_set = Array.from(new Set(iadvancedContext.structure.join("")))
                 const valid_characters = ['.', ')', '(']
                 if (structure_chr_set.some(function(e){ return !valid_characters.includes(e);})) {
@@ -89,8 +89,8 @@ export default function Page() {
                     setInvalidInput(false)
                     setSubmit(submit == 2 ? 1 : -submit);
                 }
-        }
-        
+            }
+        }   
         
     }
     function handleCheckbox() {

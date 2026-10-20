@@ -563,19 +563,7 @@ def advanced_construct():
             res_sequence = best_result[1]
             res_structure = best_result[2]
             mfe = best_result[3]
-        path = "./data/txt/" + str(random.random())[2:]
 
         return jsonify({"sequence": res_sequence, 
                         "generated_structure": res_structure,
-                        "mfe": mfe,
-                        "filepath": path})
-
-
-@app.route('/data/txt/<path:filename>', methods=['GET'])
-@cross_origin()
-def serve_txt(filename):
-    TXT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'txt'))
-    try:    
-        return send_from_directory(TXT_DIR, filename, mimetype='text/plain; charset=utf-8', as_attachment=True, download_name='result_summary.txt')
-    except FileNotFoundError:
-        abort(404)
+                        "mfe": mfe})
