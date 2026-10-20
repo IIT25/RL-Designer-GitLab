@@ -98,7 +98,7 @@ def python_route():
         #TODO Validate incoming data
         #TODO Change defualt, just for testing
         print(f"miRNA1: {req_data['miRNA1']} \n miRNA2: {req_data['miRNA2']} \n  protein: {req_data['protein']} \n")
-        [res_sequence, res_full_seq, res_structure, original_structure, mfe] = construct_design([req_data['miRNA1'], req_data['miRNA2'], req_data['protein']])
+        [res_sequence, res_full_seq, res_structure, original_structure, mfe] = construct_design(req_data['use_aros'],[req_data['miRNA1'], req_data['miRNA2'], req_data['protein']])
 
         return jsonify({"sequence": res_sequence, 
                 "full_sequence": res_full_seq,
@@ -401,8 +401,8 @@ def run_aros(workdir: Path):
 
 
 
-def construct_design(domains):
-    use_aros = True
+def construct_design(use_aros, domains):
+    print("Using AROS: "+ str(use_aros))
     #RL3
     miRNA1 = domains[0]
     miRNA2 = domains[1]
@@ -534,29 +534,40 @@ def target_disease():
 def advanced_construct():
     if request.method == 'POST':
         req_data = request.get_json()
-        #TODO validate
+        use_aros = req_data['use_aros']
         sequence = req_data['sequence']
         structure = req_data['structure']
         print(sequence)
         print(structure)
-        results = multi_start_hill_climb(sequence, structure)
-        best_result = min(results, key=lambda x: x[3])
+        if not sequence or len(sequence) != len(structure):
+            return jsonify({"error": "sequence and structure must be non-empty and the same length"}), 400
+        if use_aros:
+            try:
+                sequence = sequence.replace("K", "X").replace("k", "x")
+            except ValueError as e:
+                return jsonify({"error": str(e)}), 400
+            with tempfile.TemporaryDirectory() as tmp:
+                work = Path(tmp)
+                (work / "misc" / "temp_folder").mkdir(parents=True)
+                output_file(sequence, structure, path=work / "misc" / "input_1.txt")
+                run_aros(work)
+                try:
+                    res_sequence, res_structure = input_file(path=work / "misc" / "temp_folder")
+                except FileNotFoundError:
+                    return jsonify({"error": "AROS could not design this input."}), 422
 
+            _, mfe = RNA.fold(res_sequence)
+        else:
+            results = multi_start_hill_climb(sequence, structure)
+            best_result = min(results, key=lambda x: x[3])
+            res_sequence = best_result[1]
+            res_structure = best_result[2]
+            mfe = best_result[3]
         path = "./data/txt/" + str(random.random())[2:]
-        '''with open(path, "w") as f:
-                        for res in results:
-                             f.write(str(res))
-                             f.write("\n")
-                             f.write("Sequence: " +res[1])
-                             f.write("\n")
-                             f.write("Target structure:    " +structure)
-                             f.write("Generated structure: " +res[2])
-                             f.write("\n")
-        '''
 
-        return jsonify({"sequence": best_result[1], 
-                        "generated_structure": best_result[2],
-                        "mfe": best_result[3],
+        return jsonify({"sequence": res_sequence, 
+                        "generated_structure": res_structure,
+                        "mfe": mfe,
                         "filepath": path})
 
 

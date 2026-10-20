@@ -16,6 +16,8 @@ export default function Page() {
    const [submit, setSubmit] = useState(2)
    const [invalidInput, setInvalidInput] = useState(false)
    const [errortext, setErrorText] = useState("")
+   //Backend selector
+    const [isAROS, setIsAROS] = useState(false);
    const [txt_link, setTxt_link] = useState("")
    const [pdb_link, setPdb_link] = useState("")
    const [response, setdata] = useState({
@@ -40,6 +42,7 @@ export default function Page() {
                 headers: { "Content-type": "application/json"},
                 //Match inputs here
                 body: JSON.stringify({
+                    use_aros:isAROS,
                     sequence: iadvancedContext.sequence.join(""),
                     structure: iadvancedContext.structure.join("")
                 })
@@ -90,11 +93,24 @@ export default function Page() {
         
         
     }
+    function handleCheckbox() {
+        setIsAROS(!isAROS)
+    }
   return (
     <main className="flex min-h-screen flex-col items-center justify-around p-10">
     <h1 className="mb-4 text-2xl font-bold tracking-tight text-heading md:text-4xl lg:text-5xl">Results page</h1>
     {invalidInput && <p className="text-red-500"> Invalid input: {errortext} </p>}
+    <div className="flex flex-row items-center gap-8">
     <button onClick={handleButtonSubmit} className="py-4 px-4 rounded-full transition-colors bg-white hover:bg-[#383838] dark:hover:bg-[#ccc]">Construct the design!</button>
+     <label>Use AROS backend:
+        <input 
+          type="checkbox" 
+          name="onion" 
+          checked={isAROS} 
+          onChange={handleCheckbox}
+        />
+      </label>
+     </div>
      {isDataLoading && <LoadingIndicator />}
      {!isDataLoading && submit !=2 && 
      <DesignOutput sequence={response.sequence} gen_structure={response.generated_structure} original_structure={iadvancedContext.structure.join("")} mfe={response.mfe}/>}
