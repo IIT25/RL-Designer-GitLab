@@ -11,11 +11,14 @@ from flask import send_from_directory
 from flask import abort
 from flask_cors import CORS, cross_origin
 from openpyxl import load_workbook
+import subprocess
+from pathlib import Path
 
 app = Flask(__name__)
 
-
-
+API_DIR = Path(__file__).resolve().parent
+DATA_DIR = API_DIR / "data"
+AROS_BIN = API_DIR / "bin" / "aros"
 
 @app.route("/mrna", methods=["GET"])
 def mrna_suggestion():
@@ -304,7 +307,7 @@ def multi_start_hill_climb(seq_in, structure,
 def output_file(
     domains_out,
     structure_out,
-    path: Path = AROS_INPUT_FILE,
+    path
 ):
     if not isinstance(domains_out, str):
         domains_out = "".join(domains_out)
@@ -380,9 +383,6 @@ def input_file(path: Path, file_pattern: str = "temp_file_*.txt"):
     return best[1], best[2]
 
 import shutil, tempfile
-
-API_DIR = Path(__file__).resolve().parent
-AROS_BIN = API_DIR / "bin" / "aros"
 
 def run_aros(workdir: Path):
     exe = Path("/tmp/aros_bin")
