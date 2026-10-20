@@ -16,18 +16,17 @@ export default function Page() {
    const [submit, setSubmit] = useState(2)
    const [invalidInput, setInvalidInput] = useState(false)
    const [errortext, setErrorText] = useState("")
-   const [txt_link, setTxt_link] = useState("")
+   //Backend selector
+    const [isAROS, setIsAROS] = useState(false);
    const [pdb_link, setPdb_link] = useState("")
    const [response, setdata] = useState({
         sequence: "",
         full_sequence: "",
         generated_structure: "",
-        mfe: "",
-        filepath: ""
+        mfe: ""
     });
     //Loading indicator
     const [isDataLoading, setIsDataLoading] = useState(false);
-    const [receivedPDB, setReceivedPDB] = useState(false)
     
     const handleSubmit = useCallback(async () => {
         if (submit == 2) {
@@ -40,6 +39,7 @@ export default function Page() {
                 headers: { "Content-type": "application/json"},
                 //Match inputs here
                 body: JSON.stringify({
+                    use_aros:isAROS,
                     sequence: iadvancedContext.sequence.join(""),
                     structure: iadvancedContext.structure.join("")
                 })
@@ -49,10 +49,8 @@ export default function Page() {
                         sequence: data.sequence,
                         full_sequence: data.full_sequence,
                         generated_structure: data.generated_structure,
-                        mfe: data.mfe,
-                        filepath: data.filepath
-                    })
-                    setTxt_link(response.filepath);
+                        mfe: data.mfe
+                    });
                     fetch("api/pdb", {
                     method: "POST",
                     headers: { "Content-type": "application/json"},
@@ -72,10 +70,15 @@ export default function Page() {
 
 
     function handleButtonSubmit(e: any) {
-        if (iadvancedContext.sequence.join("").length != iadvancedContext.structure.join("").length) {
+        if (iadvancedContext.sequence.join("").length == 0) {
+            setInvalidInput(true)
+            setErrorText(`Sequence with length 0`)  
+        }
+        else {
+            if (iadvancedContext.sequence.join("").length != iadvancedContext.structure.join("").length) {
             setInvalidInput(true)
             setErrorText(`the sequence and the structure has different lengths with: sequence: ${iadvancedContext.sequence.join("").length} structure: ${iadvancedContext.structure.join("").length}`)
-        } else {
+            } else {
                 const structure_chr_set = Array.from(new Set(iadvancedContext.structure.join("")))
                 const valid_characters = ['.', ')', '(']
                 if (structure_chr_set.some(function(e){ return !valid_characters.includes(e);})) {
@@ -86,15 +89,28 @@ export default function Page() {
                     setInvalidInput(false)
                     setSubmit(submit == 2 ? 1 : -submit);
                 }
-        }
+            }
+        }   
         
-        
+    }
+    function handleCheckbox() {
+        setIsAROS(!isAROS)
     }
   return (
     <main className="flex min-h-screen flex-col items-center justify-around p-10">
     <h1 className="mb-4 text-2xl font-bold tracking-tight text-heading md:text-4xl lg:text-5xl">Results page</h1>
     {invalidInput && <p className="text-red-500"> Invalid input: {errortext} </p>}
+    <div className="flex flex-row items-center gap-8">
     <button onClick={handleButtonSubmit} className="py-4 px-4 rounded-full transition-colors bg-white hover:bg-[#383838] dark:hover:bg-[#ccc]">Construct the design!</button>
+     <label>Use AROS backend:
+        <input 
+          type="checkbox" 
+          name="onion" 
+          checked={isAROS} 
+          onChange={handleCheckbox}
+        />
+      </label>
+     </div>
      {isDataLoading && <LoadingIndicator />}
      {!isDataLoading && submit !=2 && 
      <DesignOutput sequence={response.sequence} gen_structure={response.generated_structure} original_structure={iadvancedContext.structure.join("")} mfe={response.mfe}/>}

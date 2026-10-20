@@ -11,11 +11,14 @@ from flask import send_from_directory
 from flask import abort
 from flask_cors import CORS, cross_origin
 from openpyxl import load_workbook
+import subprocess
+from pathlib import Path
 
 app = Flask(__name__)
 
-
-
+API_DIR = Path(__file__).resolve().parent
+DATA_DIR = API_DIR / "data"
+AROS_BIN = API_DIR / "bin" / "aros"
 
 @app.route("/mrna", methods=["GET"])
 def mrna_suggestion():
@@ -37,7 +40,11 @@ def mrna_suggestion():
         print("Could not parse result")
 
     for entry in data['results']:
-        name = entry['proteinDescription']['recommendedName']['fullName']['value']
+        try:
+            name = entry['proteinDescription']['recommendedName']['fullName']['value']
+        except:
+            name = entry['proteinDescription']['submissionNames'][0]['fullName']['value']
+            print(entry['proteinDescription']['submissionNames'])
         suggestions += [name]
     if (len(suggestions) == 0):
         suggestions = ["No match found"]
@@ -52,7 +59,7 @@ def mrna_suggestion():
                             seq_id = databaseRef['id']
 
 
-            seq = requests.get('https://www.ebi.ac.uk/ena/browser/api/fasta/M62654')
+            seq = requests.get('https://www.ebi.ac.uk/ena/browser/api/fasta/' + str(seq_id))
             #TODO maybe also return the first line with the metadata
             sequence_result = ''.join(seq.text.split('\n')[1:])
             suggestions = []
@@ -91,7 +98,7 @@ def python_route():
         #TODO Validate incoming data
         #TODO Change defualt, just for testing
         print(f"miRNA1: {req_data['miRNA1']} \n miRNA2: {req_data['miRNA2']} \n  protein: {req_data['protein']} \n")
-        [res_sequence, res_full_seq, res_structure, original_structure, mfe] = construct_design([req_data['miRNA1'], req_data['miRNA2'], req_data['protein']])
+        [res_sequence, res_full_seq, res_structure, original_structure, mfe] = construct_design(req_data['use_aros'],[req_data['miRNA1'], req_data['miRNA2'], req_data['protein']])
 
         return jsonify({"sequence": res_sequence, 
                 "full_sequence": res_full_seq,
@@ -297,45 +304,144 @@ def multi_start_hill_climb(seq_in, structure,
     return results
 
 
+def output_file(
+    domains_out,
+    structure_out,
+    path
+):
+    if not isinstance(domains_out, str):
+        domains_out = "".join(domains_out)
 
-def construct_design(domains):
+    if len(domains_out) != len(structure_out):
+        raise ValueError(
+            f"Sequence ({len(domains_out)}) and structure "
+            f"({len(structure_out)}) must be the same length."
+        )
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    path.write_text(
+        f"Sequence: {domains_out}\n"
+        f"Structure: {structure_out}\n",
+        encoding="utf-8",
+    )
+
+    return path
+
+
+
+    
+def input_file(path: Path, file_pattern: str = "temp_file_*.txt"):
+    path = Path(path)
+    files = sorted(path.glob(file_pattern))
+
+    
+    if not files and (path / "temp_file.txt").is_file():
+        files = [path / "temp_file.txt"]
+
+    if not files:
+        raise FileNotFoundError(f"No output files matching {file_pattern} in {path}")
+
+    candidates = [] 
+
+    for full_path in files:
+        sequence = structure = None
+        ensemble_div = None
+
+        with full_path.open("r", encoding="utf-8") as file:
+            for line in file:
+                line = line.strip()
+                if line.startswith("Sequence:"):
+                    sequence = line.split(":", 1)[1].strip()
+                elif line.startswith("Structure:"):
+                    structure = line.split(":", 1)[1].strip()
+                elif line.startswith("Ensemble_div:"):
+                    try:
+                        ensemble_div = float(line.split(":", 1)[1].strip())
+                    except ValueError:
+                        ensemble_div = None
+
+        
+        if sequence is None or structure is None or len(sequence) != len(structure):
+            print(f"Skipping malformed output file: {full_path}", flush=True)
+            continue
+
+        
+        candidates.append((
+            ensemble_div if ensemble_div is not None else float("inf"),
+            sequence, structure, full_path.name,
+        ))
+
+    if not candidates:
+        raise ValueError(f"No valid output files found in {path}")
+
+    best = min(candidates, key=lambda c: c[0])
+    print(f"Picked {best[3]} with Ensemble_div={best[0]} "
+          f"out of {len(candidates)} candidates", flush=True)
+
+    return best[1], best[2]
+
+import shutil, tempfile
+
+def run_aros(workdir: Path):
+    exe = Path("/tmp/aros_bin")
+    if not exe.exists():
+        shutil.copy(AROS_BIN, exe)
+        exe.chmod(0o755)
+    env = {**os.environ, "RUST_BACKTRACE": "1"}
+    result = subprocess.run([str(exe)], cwd=workdir, text=True,
+                            capture_output=True, timeout=240, env=env)
+    print(f"AROS exit code: {result.returncode}", flush=True)
+    print(f"AROS stdout:\n{result.stdout}", flush=True)
+    print(f"AROS stderr:\n{result.stderr}", flush=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"AROS failed ({result.returncode}):\n{result.stderr}")
+    return result.stdout
+
+
+
+def construct_design(use_aros, domains):
+    print("Using AROS: "+ str(use_aros))
     #RL3
-    '''miRNA1 = "UAGCUUAUCAGACUGAUGUUGACU"
-    miRNA2 = "UGGAGUGUGACAAUGGUGUUUG"
-    '''
     miRNA1 = domains[0]
     miRNA2 = domains[1]
 
     protein = domains[2]
     RiboSwitch = "UUUUCCAUCAAGAACAGGCCACCAUGGAAAA"
 
-    #Gen ="CGUAAAGGAGAAGAACUUUUCACUGGAGUUGUCCCAAUUCUUGUUGAAUUAGAUGGUGAUGUUAAUGGGCACAAAUUUUCUGUCAGUGGAGAGGGUGAAGGUGAUGCAACAUACGGAAAACUUACCCUUAAAUUUAUUUGCACUACUGGAAAACUACCUGUUCCAUGGCCAACACUUGUCACUACUUUCGGUUAUGGUGUUCAAUGCUUUGCGAGAUACCCAGAUCAUAUGAAACAGCAUGACUUUUUCAAGAGUGCCAUGCCCGAAGGUUAUGUACAGGAAAGAACUAUAUUUUUCAAAGAUGACGGGAACUACAAGACACGUGCUGAAGUCAAGUUUGAAGGUGAUACCCUUGUUAAUAGAAUCGAGUUAAAAGGUAUUGAUUUUAAAGAAGAUGGAAACAUUCUUGGACACAAAUUGGAAUACAACUAUAACUCACACAAUGUAUACAUCAUGGCAGACAAACAAAAGAAUGGAAUCAAAGUUAACUUCAAAAUUAGACACAACAUUGAAGAUGGAAGCGUUCAACUAGCAGACCAUUAUCAACAAAAUACUCCAAUUGGCGAUGGCCCUGUCCUUUUACCAGACAACCAUUACCUGUCCACACAAUCUGCCCUUUCGAAAGAUCCCAACGAAAAGAGAGAuCACAUGGUCCUUCUUGAGUUUGUAACAGCUGCUGGGAUUACACAUGGCAUGGAUGAACUAUACAAAUAA"
-
-    Toehold = 'K' *10
+    Toehold = 'X'*10 if use_aros else 'K' *10
+    RiboSwitchDisplace = 'R'*13
 
     loop7 = "N" * 7
-
-    #RL3
-    RiboSwitchDisplace = "R" * 13
     domain_order = (comp(miRNA1) + comp(miRNA2) + comp(RiboSwitchDisplace) + comp(Toehold) + miRNA2[7:]
                     + loop7 + miRNA1[7:] + Toehold + RiboSwitchDisplace + RiboSwitch + comp(RiboSwitchDisplace))
 
     structure_map = ('(' *len(comp(miRNA1)[7:]) + '.' *len(comp(miRNA1)[:7]) + '(' *len(comp(miRNA2)[7:]) + '.' *len(comp(miRNA2)[:7]) + '.' * len((comp(RiboSwitchDisplace) + comp(Toehold))) + ')' * len(miRNA2[7:]) + 
                      '.' * len(loop7) + ')' * len(miRNA1[7:]) + '.' * len(Toehold) + '(' * len(RiboSwitchDisplace) + '(' * 8 + '.' * (len(RiboSwitch) -16) + ')' * 8 +  ')' * len(comp(RiboSwitchDisplace)))
 
-    results = multi_start_hill_climb(domain_order, structure_map)
-    best_result = min(results, key=lambda x: x[3])
-    full_seq = best_result[1] + protein
+    if use_aros:
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp)
+            (work / "misc" / "temp_folder").mkdir(parents=True)
+            output_file(domain_order, structure_map, path=work / "misc" / "input_1.txt")
+            run_aros(work)
+            res_sequence, res_structure = input_file(path=work / "misc" / "temp_folder")
+
+            print(res_sequence, flush=True)
+            print(res_structure, flush=True)
+
+            _, mfe = RNA.fold(res_sequence)
+    else:
+        results = multi_start_hill_climb(domain_order, structure_map)
+        best_result = min(results, key=lambda x: x[3])
+        mfe = best_result[3]
+        res_structure = best_result[2]
+        res_sequence = best_result[1]
+    
+    full_seq = res_sequence + protein
     print(structure_map)
-    '''with open("./data/run20.txt", "w") as f:
-                for res in results:
-                     f.write(str(res))
-                     f.write("\n")
-                     f.write("Main strand: " +res[1])
-                     f.write("\n")
-                     f.write("\n")
-    '''
-    return [best_result[1], full_seq, best_result[2], structure_map, best_result[3]]
+    return [res_sequence, full_seq, res_structure, structure_map, mfe]
 
 '''
 @app.route("/pdb", methods=['POST'])
@@ -428,37 +534,36 @@ def target_disease():
 def advanced_construct():
     if request.method == 'POST':
         req_data = request.get_json()
-        #TODO validate
+        use_aros = req_data['use_aros']
         sequence = req_data['sequence']
         structure = req_data['structure']
         print(sequence)
         print(structure)
-        results = multi_start_hill_climb(sequence, structure)
-        best_result = min(results, key=lambda x: x[3])
+        if not sequence or len(sequence) != len(structure):
+            return jsonify({"error": "sequence and structure must be non-empty and the same length"}), 400
+        if use_aros:
+            try:
+                sequence = sequence.replace("K", "X").replace("k", "x")
+            except ValueError as e:
+                return jsonify({"error": str(e)}), 400
+            with tempfile.TemporaryDirectory() as tmp:
+                work = Path(tmp)
+                (work / "misc" / "temp_folder").mkdir(parents=True)
+                output_file(sequence, structure, path=work / "misc" / "input_1.txt")
+                run_aros(work)
+                try:
+                    res_sequence, res_structure = input_file(path=work / "misc" / "temp_folder")
+                except FileNotFoundError:
+                    return jsonify({"error": "AROS could not design this input."}), 422
 
-        path = "./data/txt/" + str(random.random())[2:]
-        '''with open(path, "w") as f:
-                        for res in results:
-                             f.write(str(res))
-                             f.write("\n")
-                             f.write("Sequence: " +res[1])
-                             f.write("\n")
-                             f.write("Target structure:    " +structure)
-                             f.write("Generated structure: " +res[2])
-                             f.write("\n")
-        '''
+            _, mfe = RNA.fold(res_sequence)
+        else:
+            results = multi_start_hill_climb(sequence, structure)
+            best_result = min(results, key=lambda x: x[3])
+            res_sequence = best_result[1]
+            res_structure = best_result[2]
+            mfe = best_result[3]
 
-        return jsonify({"sequence": best_result[1], 
-                        "generated_structure": best_result[2],
-                        "mfe": best_result[3],
-                        "filepath": path})
-
-
-@app.route('/data/txt/<path:filename>', methods=['GET'])
-@cross_origin()
-def serve_txt(filename):
-    TXT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'txt'))
-    try:    
-        return send_from_directory(TXT_DIR, filename, mimetype='text/plain; charset=utf-8', as_attachment=True, download_name='result_summary.txt')
-    except FileNotFoundError:
-        abort(404)
+        return jsonify({"sequence": res_sequence, 
+                        "generated_structure": res_structure,
+                        "mfe": mfe})

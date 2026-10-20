@@ -23,4 +23,4 @@ ENV PATH="/app/.venv/bin:$PATH"
  
 EXPOSE 8000
  
-CMD exec gunicorn --bind 0.0.0.0:${PORT} --workers 2 --timeout 120 index:app
+CMD exec gunicorn --bind 0.0.0.0:${PORT} --workers 2 --timeout 1200 index:app
