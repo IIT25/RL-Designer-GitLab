@@ -7,8 +7,8 @@ RL Designer is a web based software tool, for the creation of optimized sequence
 ## Installation
 RL Designer is easily available without any installation at https://rl-designer.online/. Still for many use cases it is important to have access to the exact deployment steps. This section details both a way for local deployment and records how our team created the production deployment. (CPU type: Please note that the interated AROS binary is for x86_64 only now, building for ARM can be done)
 General requirements:
-- Git: Install Git
-- Node + npm: Install Node + npm (Troubleshooting on windows: it might require an additional Set-ExecutionPolicy RemoteSigned)
+- Git: Install [Git](https://git-scm.com/install/)
+- Node + npm: [Install Node + npm](https://nodejs.org/en/download) (Troubleshooting on windows: it might require an additional Set-ExecutionPolicy RemoteSigned)
 
 **Local deployment:**
 This option is for those who would like to deploy RL designer locally, for example to contribute to development.
@@ -37,7 +37,7 @@ Specific requirements:
         apt install docker-compose-plugin -y
         # Verify Compose
         docker compose version```
-    - Windows: Install Docker Desktop
+    - Windows: [Install Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 Installation Steps:
 
