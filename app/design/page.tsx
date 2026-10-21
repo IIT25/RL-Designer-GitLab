@@ -114,23 +114,23 @@ export default function Page() {
     
     <button onClick={handleButtonSubmit} className="py-4 px-4 rounded-full transition-colors bg-white hover:bg-[#383838] dark:hover:bg-[#ccc]">Construct the design!</button>
      
-     <div className="flex gap-4">
+     <div className="inline-flex rounded-xl bg-white/20 p-1.5 backdrop-blur-md border border-white/30 shadow-inner">
       <span
         onClick={() => setIsRL2(false)}
-        className={`cursor-pointer px-2 py-1 rounded ${
+        className={`rounded-lg px-6 py-3 text-base font-semibold transition-all duration-200 ${
           !isRL2
-            ? "bg-blue-500 text-white"
-            : "text-gray-500 hover:text-gray-700"
+            ? "bg-white text-blue-900 shadow-md"
+            : "text-blue-900/70 hover:text-blue-950 hover:bg-white/10"
         }`}
       >
         RiboLogic 3 (RL3)
       </span>
       <span
         onClick={() => setIsRL2(true)}
-        className={`cursor-pointer px-2 py-1 rounded ${
+        className={`rounded-lg px-6 py-3 text-base font-semibold transition-all duration-200 ${
         isRL2
-            ? "bg-blue-500 text-white"
-            : "text-gray-500 hover:text-gray-700"
+            ? "bg-white text-blue-900 shadow-md"
+            : "text-blue-900/70 hover:text-blue-950 hover:bg-white/10"
         }`}
       >   
         RiboLogic 2 (RL2)
