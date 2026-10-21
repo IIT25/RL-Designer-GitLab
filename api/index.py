@@ -446,7 +446,7 @@ def construct_design(use_aros, use_RL2, domains):
         mfe = best_result[3]
         res_structure = best_result[2]
         res_sequence = best_result[1]
-        full_seq = res_sequence + protein
+        full_seq = res_sequence + protein.replace("T", "U")
         return [res_sequence[key_length:], res_sequence[:key_length], full_seq, res_structure, structure_map, mfe]
 
     else:
@@ -481,7 +481,7 @@ def construct_design(use_aros, use_RL2, domains):
             res_structure = best_result[2]
             res_sequence = best_result[1]
         
-        full_seq = res_sequence + protein
+        full_seq = res_sequence + protein.replace("T", "U")
         print(structure_map)
         return [res_sequence, "", full_seq, res_structure, structure_map, mfe]
 

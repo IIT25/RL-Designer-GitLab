@@ -1,55 +1,72 @@
-# Team Aarhus University 2026 Software
-
-If your team competes in the [**Software & AI** village](https://villages.igem.org) or wants to
-apply for the [**Best Software** award](https://competition.igem.org/judging/awards/special), you **MUST** host all the
-source code of your team's software tool in this repository, `main` branch. By the **Wiki Freeze**, a
-[release](https://docs.gitlab.com/ee/user/project/releases/) will be automatically created as the judging artifact of
-this software tool. You will be able to keep working on your software after the Grand Jamboree.
-
-See the [Software Project](https://teams.igem.org/go/deliverables/software) page for the full requirements (including the
-open-source license requirement; note that **Software & AI** village teams are not eligible for the Best Software award).
-
-> If your team does not have any software tool, you can totally ignore this repository. If left unchanged, this
-repository will be automatically deleted by the end of the season.
-
-> **Using an AI assistant (e.g. Claude Code)?** Please read [.claude/RESPONSIBLE_AI_USE.md](.claude/RESPONSIBLE_AI_USE.md) first. You remain fully responsible for everything you commit: don't misrepresent what your tool does, never commit secrets, and review every change.
+# Team Aarhus University 2026 Software: RL designer
 
 ## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might
-be unfamiliar with (for example your team wiki). A list of Features or a Background subsection can also be added here.
-If there are alternatives to your project, this is a good place to list differentiating factors.
+One of our key goals with the RiboLogic system is to create a new platform that could be easily fitted to new diseases. This presents the challenge that the system's sequence has to be often modified, for example to respond to different miRNAs, slowing down the adaptation process significantly. We have also found that the relatively scattered resources on miRNAs could also make the process cumbersome. To overcome these challenges we have created two software tools, one of which is RL Designer.
+RL Designer is a web based software tool, for the creation of optimized sequences for RiboLogic and other RNA systems. It has a key role in this process as the RiboLogic system's functions depend on its folding. A key consideration through the software's design process was to make it accessible to a wide audience, so it has workflows with a range of different complexities, allowing users to gradually explore and learn its usage. Additionally it can be accessed both through the web interface and programmatically. While most users won't need an installation at all, instructions are provided under Installation for local deployment and for a full recreation of our production deployment. More information can be found at: https://2026.igem.wiki/aarhus-university/software
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew.
-However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing
-specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a
-specific context like a particular programming language version or operating system or has dependencies that have to be
-installed manually, also add a Requirements subsection.
+RL Designer is easily available without any installation at https://rl-designer.online/. Still for many use cases it is important to have access to the exact deployment steps. This section details both a way for local deployment and records how our team created the production deployment. (CPU type: Please note that the interated AROS binary is for x86_64 only now, building for ARM can be done)
+General requirements:
+- Git: Install Git
+- Node + npm: Install Node + npm (Troubleshooting on windows: it might require an additional Set-ExecutionPolicy RemoteSigned)
+
+**Local deployment:**
+This option is for those who would like to deploy RL designer locally, for example to contribute to development.
+Specific requirements:
+ - uv:
+    - Linux: ``curl -LsSf https://astral.sh/uv/install.sh | sh`` + Terminal restart
+    - Windows: ``powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`` + Terminal restart
+Installation Steps:
+1. Clone the repository from the official iGEM GitLab: ``git clone https://gitlab.igem.org/2026/software/aarhus-university/rl-designer.git``
+2. ``cd rl-designer``
+3. ``npm install``
+4. ``npm run dev:all``
+
+**Recreate our current deployment:**
+This part is mainly meant for future iGEM teams who want to build upon our code, and for people who want to fully recreate our production deployment from the source code. In order to keep it simple and consistent the project uses Docker containerized deployment and Docker Compose for unified dependency management and setup. It is currently deployed on [Hetzner](https://www.hetzner.com/), but it should be compatible with other providers as well.
+
+Specific requirements:
+- Docker + Docker Compose:
+    - Linux: 
+        ```# Install Docker using the official convenience script
+        curl -fsSL https://get.docker.com | sh
+        # Verify the installation
+        docker --version
+        # Docker Compose is now included in the Docker script, but if needed it can be installed in the following way.
+        # Install Docker Compose plugin
+        apt install docker-compose-plugin -y
+        # Verify Compose
+        docker compose version```
+    - Windows: Install Docker Desktop
+
+Installation Steps:
+
+1. Clone the repository from the official iGEM GitLab: ``git clone https://gitlab.igem.org/2026/software/aarhus-university/rl-designer.git``
+2. ``cd rl-designer``
+3. ``In the .env file at the top level change the domain name to a domain that you have access to``
+4. ``docker compose build``
+5. ``docker compose up``
+
+After the initial build, the containers can be stopped with:
+``Ctrl+C`` in terminal where it was started
+``docker compose down``
+
+And can be rebuilt+started with:
+``docker compose up --build``
+
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of
-usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably
-include in the README.
+For usage instructions, please check out our tutorials on the wiki at the [Software Page](https://2026.igem.wiki/aarhus-university/software#tutorial_start)
 
-## Data and large files
-Keep this repository for **source code**. For datasets, machine-learning model weights, large media, and other heavy
-artifacts, use [Zenodo](https://teams.igem.org/go/deliverables/software/zenodo) — it gives each upload a citable DOI and
-is the recommended long-term archive for iGEM teams. Reference your Zenodo records from this README so judges and future
-teams can find them.
 
 ## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started.
-Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps
-explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce
-the likelihood that the changes inadvertently break something. Having instructions for running tests is especially
-helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+We are open to contributions. If you happen to find a bug please open an issue with a minimal example of how to reproduce it.
+For other types of contributions please first contact us at au804046@uni.au.dk.
 
 ## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+ViennaRNA has been an important cornerstone of this project [https://github.com/ViennaRNA/ViennaRNA](https://github.com/ViennaRNA/ViennaRNA)
+Besides this we would like to thank the teams behind the databases that RL designer uses, their offical websites can be found at: [Uniport](https://www.uniprot.org/), [HMDD](http://www.cuilab.cn/hmdd), [miRBase](https://www.mirbase.org).
+
 
 ## License
 This repository is licensed under the [Apache License 2.0](LICENSE) — a permissive

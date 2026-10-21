@@ -104,7 +104,7 @@ export default function Page() {
     }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-around p-10">
+    <main className="flex min-h-screen max-h-screen flex-col items-center justify-around p-10 overflow-y-auto gap-5">
     <h1 className="mb-4 text-2xl font-bold tracking-tight text-heading md:text-4xl lg:text-5xl">Design page</h1>
     <p>Here you can construct the final design using your selected miRNAs and protein from the previous pages by simply clicking the "Construct design" button. 
         The "Demo data" button gives predefined values for miRNAs and protein, so by then clicking the "Construct design" button, the system can be easily inspected. The construction of the design may take some time.</p>
