@@ -16,6 +16,8 @@ Specific requirements:
  - uv:
     - Linux: ``curl -LsSf https://astral.sh/uv/install.sh | sh`` + Terminal restart
     - Windows: ``powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`` + Terminal restart
+
+    
 Installation Steps:
 1. Clone the repository from the official iGEM GitLab: ``git clone https://gitlab.igem.org/2026/software/aarhus-university/rl-designer.git``
 2. ``cd rl-designer``
@@ -39,8 +41,8 @@ Specific requirements:
         docker compose version```
     - Windows: [Install Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
-Installation Steps:
 
+Installation Steps:
 1. Clone the repository from the official iGEM GitLab: ``git clone https://gitlab.igem.org/2026/software/aarhus-university/rl-designer.git``
 2. ``cd rl-designer``
 3. ``In the .env file at the top level change the domain name to a domain that you have access to``
