@@ -19,6 +19,7 @@ export default function Page() {
    const [invalidInput, setInvalidInput] = useState(false)
    const [response, setdata] = useState({
         sequence: "",
+        key_strand: "",
         full_sequence: "",
         generated_structure: "",
         original_structure: "",
@@ -29,6 +30,7 @@ export default function Page() {
     const [isDataLoading, setIsDataLoading] = useState(false);
     //Backend selector
     const [isAROS, setIsAROS] = useState(false);
+    const [isRL2, setIsRL2] = useState(false);
     
     const handleSubmit = useCallback(async () => {
         if (submit == 2) {
@@ -43,6 +45,7 @@ export default function Page() {
                 //Match inputs here
                 body: JSON.stringify({
                     use_aros:isAROS,
+                    use_RL2:isRL2,
                     miRNA1: idesignContext.miRNA_list[0],
                     miRNA2: idesignContext.miRNA_list[1],
                     protein: idesignContext.protein
@@ -51,6 +54,7 @@ export default function Page() {
                 res.json().then((data) => {
                     setdata({
                         sequence: data.sequence,
+                        key_strand: data.key_strand,
                         full_sequence: data.full_sequence,
                         generated_structure: data.generated_structure,
                         original_structure: data.original_structure,
@@ -107,18 +111,43 @@ export default function Page() {
     <button onClick={handleDemo1} className="py-4 px-4 rounded-full transition-colors bg-white hover:bg-[#383838] dark:hover:bg-[#ccc]">Demo data 1</button>
     {invalidInput && <p className="text-red-500">Invalid input: some miRNAs have length 0</p>}
     <div className="flex flex-row items-center gap-8">
+    
     <button onClick={handleButtonSubmit} className="py-4 px-4 rounded-full transition-colors bg-white hover:bg-[#383838] dark:hover:bg-[#ccc]">Construct the design!</button>
-     <label>Use AROS backend:
+     
+     <div className="flex gap-4">
+      <span
+        onClick={() => setIsRL2(false)}
+        className={`cursor-pointer px-2 py-1 rounded ${
+          !isRL2
+            ? "bg-blue-500 text-white"
+            : "text-gray-500 hover:text-gray-700"
+        }`}
+      >
+        RiboLogic 3 (RL3)
+      </span>
+      <span
+        onClick={() => setIsRL2(true)}
+        className={`cursor-pointer px-2 py-1 rounded ${
+        isRL2
+            ? "bg-blue-500 text-white"
+            : "text-gray-500 hover:text-gray-700"
+        }`}
+      >   
+        RiboLogic 2 (RL2)
+      </span>
+    </div>
+
+     {!isRL2 && <label>Use AROS backend:
         <input 
           type="checkbox" 
           name="onion" 
           checked={isAROS} 
           onChange={handleCheckbox}
         />
-      </label>
+      </label>}
     </div>
      {isDataLoading && <LoadingIndicator />}
-     {!isDataLoading && submit !=2 && <DesignOutput sequence={response.sequence} full_seq={response.full_sequence} gen_structure={response.generated_structure} original_structure={response.original_structure} mfe={response.mfe}/>}
+     {!isDataLoading && submit !=2 && <DesignOutput sequence={response.sequence} key_strand={response.key_strand} full_seq={response.full_sequence} gen_structure={response.generated_structure} original_structure={response.original_structure} mfe={response.mfe}/>}
     <div className="h-50 max-h-50 p-10">
      {!isDataLoading && (pdb_text != "") && submit !=2 && (<div className="flex flex-col">
         <div className="flex bg-gray-400 rounded -mb-16 z-40 justify-end ml-auto">

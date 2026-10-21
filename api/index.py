@@ -98,9 +98,10 @@ def python_route():
         #TODO Validate incoming data
         #TODO Change defualt, just for testing
         print(f"miRNA1: {req_data['miRNA1']} \n miRNA2: {req_data['miRNA2']} \n  protein: {req_data['protein']} \n")
-        [res_sequence, res_full_seq, res_structure, original_structure, mfe] = construct_design(req_data['use_aros'],[req_data['miRNA1'], req_data['miRNA2'], req_data['protein']])
+        [res_sequence, key_strand, res_full_seq, res_structure, original_structure, mfe] = construct_design(req_data['use_aros'],req_data['use_RL2'],[req_data['miRNA1'], req_data['miRNA2'], req_data['protein']])
 
-        return jsonify({"sequence": res_sequence, 
+        return jsonify({"sequence": res_sequence,
+                "key_strand": key_strand,
                 "full_sequence": res_full_seq,
                 "generated_structure": res_structure,
                 "original_structure": original_structure,
@@ -222,7 +223,7 @@ def bp_distance_to_target(seq, target_structure):
 
 
 
-def hill_climb_design(seq_in, structure, max_steps=10000,
+def hill_climb_design(seq_in, structure, max_steps=5000,
                        n_keep=5, temperature=1.0, cooling_rate=0.999, wobble_frequency=0.05): 
     comp_dict = {'A': 'U', 'U': 'A', 'G': 'C', 'C': 'G'}
     pair_map = get_pair_map(structure, seq_in)
@@ -290,7 +291,7 @@ def hill_climb_design(seq_in, structure, max_steps=10000,
 
 
 def multi_start_hill_climb(seq_in, structure,
-                             n_runs=5, max_steps=15000, wobble_frequency=0.05): 
+                             n_runs=5, max_steps=5000, wobble_frequency=0.05): 
     results = []
     for run in range(n_runs):
         pool = hill_climb_design(seq_in, structure,
@@ -401,47 +402,88 @@ def run_aros(workdir: Path):
 
 
 
-def construct_design(use_aros, domains):
+def construct_design(use_aros, use_RL2, domains):
     print("Using AROS: "+ str(use_aros))
+    print("Using Rl2: "+ str(use_RL2))
     #RL3
     miRNA1 = domains[0]
     miRNA2 = domains[1]
+    miRNA3 = ""
+    miRNA4 = ""
 
     protein = domains[2]
-    RiboSwitch = "UUUUCCAUCAAGAACAGGCCACCAUGGAAAA"
+    if use_RL2:
+        Toehold = 'K' *10
+        loop7 = "N" * 7
+        RiboSwitch = "CUCGUUUAUCCCUGCAUACAGAAACAGAGGAGAUAUGCAAUGAUAAACGAGAACCUGGCG"
+        domain_order = (comp(miRNA1) + comp(miRNA2) + comp(miRNA3) + comp(miRNA4) + Toehold + RiboSwitch) #Without key strand
+        structure_map = ('(' * len(miRNA2[7:]) + '.' * 7 + '(' * len(miRNA1[7:]) + '.' * len(comp(Toehold) + comp(RiboSwitch[:15])) +  #Key strand structure
+                     ')' * len(comp(miRNA1[7:])) + '.' * len(comp(miRNA1[:7])) + ')' * len(comp(miRNA2[7:]))  + '.' * len(comp(miRNA2[:7]))) #Main strand base
+        #Adding the variable parts depending on the number of input miRNAs
+        key_strand = (miRNA2[7:] + loop7 + miRNA1[7:] + comp(RiboSwitch[:15]) + comp(Toehold))
+        if miRNA3 != "":
+            key_strand = (miRNA3[7:] + loop7) + key_strand
+            structure_map = ('(' * len(miRNA3[7:]) + '.' * 7) + structure_map
+            structure_map +=  ')' * len(comp(miRNA3[7:])) + '.' * len(comp(miRNA3[:7]))
 
-    Toehold = 'X'*10 if use_aros else 'K' *10
-    RiboSwitchDisplace = 'R'*13
+        if miRNA4 != "":
+                key_strand = (miRNA4[7:] + loop7) + key_strand
+                structure_map = ('(' * len(miRNA4[7:]) + '.' * 7) + structure_map
+                structure_map +=  ')' * len(comp(miRNA4[7:])) + '.' * len(comp(miRNA4[:7]))
+        
 
-    loop7 = "N" * 7
-    domain_order = (comp(miRNA1) + comp(miRNA2) + comp(RiboSwitchDisplace) + comp(Toehold) + miRNA2[7:]
-                    + loop7 + miRNA1[7:] + Toehold + RiboSwitchDisplace + RiboSwitch + comp(RiboSwitchDisplace))
+        structure_map += ('.' * len(Toehold) +
+                        '(' * 10 + '.' * 2 + '(' * 6 + '.' * 15 + ')' * 6 + '.' * 2 + ')' * 10 + '.' * 9) #Riboswitch internal structure
 
-    structure_map = ('(' *len(comp(miRNA1)[7:]) + '.' *len(comp(miRNA1)[:7]) + '(' *len(comp(miRNA2)[7:]) + '.' *len(comp(miRNA2)[:7]) + '.' * len((comp(RiboSwitchDisplace) + comp(Toehold))) + ')' * len(miRNA2[7:]) + 
-                     '.' * len(loop7) + ')' * len(miRNA1[7:]) + '.' * len(Toehold) + '(' * len(RiboSwitchDisplace) + '(' * 8 + '.' * (len(RiboSwitch) -16) + ')' * 8 +  ')' * len(comp(RiboSwitchDisplace)))
-
-    if use_aros:
-        with tempfile.TemporaryDirectory() as tmp:
-            work = Path(tmp)
-            (work / "misc" / "temp_folder").mkdir(parents=True)
-            output_file(domain_order, structure_map, path=work / "misc" / "input_1.txt")
-            run_aros(work)
-            res_sequence, res_structure = input_file(path=work / "misc" / "temp_folder")
-
-            print(res_sequence, flush=True)
-            print(res_structure, flush=True)
-
-            _, mfe = RNA.fold(res_sequence)
-    else:
+        key_length = len(key_strand)
+        domain_order = key_strand + domain_order  #Added key strand
+        if len(domain_order) != len(structure_map):
+            print('Error: domain order and structure map are not the same length')
+            print(domain_order)
+            print(structure_map)
         results = multi_start_hill_climb(domain_order, structure_map)
         best_result = min(results, key=lambda x: x[3])
         mfe = best_result[3]
         res_structure = best_result[2]
         res_sequence = best_result[1]
-    
-    full_seq = res_sequence + protein
-    print(structure_map)
-    return [res_sequence, full_seq, res_structure, structure_map, mfe]
+        full_seq = res_sequence + protein
+        return [res_sequence[key_length:], res_sequence[:key_length], full_seq, res_structure, structure_map, mfe]
+
+    else:
+        RiboSwitch = "UUUUCCAUCAAGAACAGGCCACCAUGGAAAA"
+
+        Toehold = 'X'*10 if use_aros else 'K' *10
+        RiboSwitchDisplace = 'R'*13
+
+        loop7 = "N" * 7
+        domain_order = (comp(miRNA1) + comp(miRNA2) + comp(RiboSwitchDisplace) + comp(Toehold) + miRNA2[7:]
+                        + loop7 + miRNA1[7:] + Toehold + RiboSwitchDisplace + RiboSwitch + comp(RiboSwitchDisplace))
+
+        structure_map = ('(' *len(comp(miRNA1)[7:]) + '.' *len(comp(miRNA1)[:7]) + '(' *len(comp(miRNA2)[7:]) + '.' *len(comp(miRNA2)[:7]) + '.' * len((comp(RiboSwitchDisplace) + comp(Toehold))) + ')' * len(miRNA2[7:]) + 
+                        '.' * len(loop7) + ')' * len(miRNA1[7:]) + '.' * len(Toehold) + '(' * len(RiboSwitchDisplace) + '(' * 8 + '.' * (len(RiboSwitch) -16) + ')' * 8 +  ')' * len(comp(RiboSwitchDisplace)))
+
+        if use_aros:
+            with tempfile.TemporaryDirectory() as tmp:
+                work = Path(tmp)
+                (work / "misc" / "temp_folder").mkdir(parents=True)
+                output_file(domain_order, structure_map, path=work / "misc" / "input_1.txt")
+                run_aros(work)
+                res_sequence, res_structure = input_file(path=work / "misc" / "temp_folder")
+
+                print(res_sequence, flush=True)
+                print(res_structure, flush=True)
+
+                _, mfe = RNA.fold(res_sequence)
+        else:
+            results = multi_start_hill_climb(domain_order, structure_map)
+            best_result = min(results, key=lambda x: x[3])
+            mfe = best_result[3]
+            res_structure = best_result[2]
+            res_sequence = best_result[1]
+        
+        full_seq = res_sequence + protein
+        print(structure_map)
+        return [res_sequence, "", full_seq, res_structure, structure_map, mfe]
 
 '''
 @app.route("/pdb", methods=['POST'])

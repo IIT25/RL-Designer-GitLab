@@ -160,6 +160,7 @@ export function LoadingIndicator() {
 }
 interface DesignOutputProps {
   sequence: string,
+  key_strand?: string,
   full_seq?: string,
   gen_structure: string,
   original_structure: string,
@@ -167,8 +168,9 @@ interface DesignOutputProps {
 }
 
 export function DesignOutput(outputs : DesignOutputProps) {
+  const strand_name = (outputs.key_strand ? 'main strand' : 'logic')
   return (
-    <>
+    <div className='flex flex-col gap-5'>
     {outputs.full_seq && <div>
     <div className='flex flex-row'>
     <h2>Designed full sequence: </h2>
@@ -187,37 +189,54 @@ export function DesignOutput(outputs : DesignOutputProps) {
         <p className='font-mono break-all'>{outputs.full_seq}</p>
     </div>
   </div>}
-  <div>
+    {outputs.key_strand && 
+    <div>
+      <div className='flex flex-row'>
+        <h2>Designed key strand sequence: </h2>
+          <div className='bg-gray-400 rounded'>
+          <Link href={URL.createObjectURL(new Blob([`>RiboLogicKeyStrand\n${outputs.key_strand}`]))} download="RiboLogicKeyStrand.fasta">
+          <Image
+                src={download_img}
+                alt="Key strand sequence download logo"
+                width={30}
+                height={30}
+                priority />
+          </Link>
+          </div>
+      </div>
+      <div className='flex bg-white max-h-80 overflow-y-auto'>    
+          <p className='font-mono break-all'>{outputs.key_strand}</p>
+      </div>
+    </div>}
     <div className='flex flex-row'>
-    {outputs.full_seq && <h2>Designed logic sequence: </h2>}
+    {outputs.full_seq && <h2>Designed {strand_name} sequence: </h2>}
     {!outputs.full_seq && <h2>Designed sequence: </h2>}
     <div className='bg-gray-400 rounded'>
-     <Link href={URL.createObjectURL(new Blob([`>RiboLogic\n${outputs.sequence}`]))} download="RiboLogic.fasta">
-     <Image
-          src={download_img}
-          alt="Logic sequence download logo"
-          width={30}
-          height={30}
-          priority />
-     </Link>
-     </div>
+        <Link href={URL.createObjectURL(new Blob([`>RiboLogic\n${outputs.sequence}`]))} download="RiboLogic.fasta">
+        <Image
+              src={download_img}
+              alt="Logic sequence download logo"
+              width={30}
+              height={30}
+              priority />
+        </Link>
+        </div>
      </div>
     <div className='flex bg-white max-h-80 overflow-y-auto'>    
         <p className='font-mono break-all'>{outputs.sequence}</p>
     </div>
-    </div>
     <div className='flex flex-row '>
-    <div className='flex flex-col'>
-      <p>Generated structure:</p>
-      <p>Original structure:</p>
-    </div>
-    <div className='min-w-0 flex-1 overflow-x-auto max-w-2xl bg-white'>
-     <p className='font-mono text-sm whitespace-nowrap'>{outputs.gen_structure}</p>
-     <p className='font-mono text-sm whitespace-nowrap'>{outputs.original_structure}</p>
-    </div>
+        <div className='flex flex-col'>
+          <p>Generated structure:</p>
+          <p>Original structure:</p>
+        </div>
+      <div className='min-w-0 flex-1 overflow-x-auto max-w-2xl bg-white'>
+      <p className='font-mono text-sm whitespace-nowrap'>{outputs.gen_structure}</p>
+      <p className='font-mono text-sm whitespace-nowrap'>{outputs.original_structure}</p>
+      </div>
     </div>
      <p className='font-mono'>MFE: {outputs.mfe}</p>
-     </>
+    </div>
   );
 }
 
