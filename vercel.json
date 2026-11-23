@@ -2,10 +2,12 @@
   "services": {
     "frontend": {
       "entrypoint": ".",
-      "framework": "nextjs"
+      "framework": "nextjs",
+      "root": "./"
     },
     "backend": {
-      "entrypoint": "api/index.py"
+      "entrypoint": "./index.py",
+      "root": "./api/"
     }
   }
 }
