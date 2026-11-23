@@ -20,6 +20,7 @@ API_DIR = Path(__file__).resolve().parent
 DATA_DIR = API_DIR / "data"
 AROS_BIN = API_DIR / "bin" / "aros"
 
+
 @app.route("/mrna", methods=["GET"])
 def mrna_suggestion():
     cutoff = 5
